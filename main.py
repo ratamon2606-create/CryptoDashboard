@@ -2,8 +2,9 @@ import tkinter as tk
 import threading
 import json
 import websocket
+import os # [NEW] เพิ่ม os เพื่อเช็คไฟล์
+from PIL import Image, ImageTk # [NEW] เพิ่ม PIL เพื่อโหลดรูป
 from datetime import datetime
-from PIL import Image, ImageTk
 
 from config import COLORS, COINS_OPTIONS, FONTS, TIMEFRAMES
 from utils.binance_api import get_binance_ticker, get_klines
@@ -90,13 +91,13 @@ class HomePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
+        # Header
         h = Header(self, show_time=True)
         h.pack(fill="x", padx=40, pady=(15, 0))
 
         tk.Label(self, text="Portfolio Overview", font=FONTS["h1"], 
                  fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(0, 10), anchor="center")
         
-        # [จุดที่ต้องแก้ความสูง] แก้เลข height ตรงนี้ครับ
         self.graph = PulseGraph(self, width=950, height=340) 
         self.graph.pack(pady=(0, 5))
         
@@ -213,12 +214,22 @@ class ProDetailPage(tk.Frame):
         sym_frame.pack(side="left")
         
         base_asset = self.symbol_upper.replace("USDT", "")
+        
+        # ชื่อเหรียญ (BTC)
         tk.Label(sym_frame, text=base_asset, font=FONTS["h1"], 
                  bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(side="left")
+        
+        # ชื่อคู่ (USDT)
         font_light = (FONTS["h1"][0], FONTS["h1"][1], "normal")
         tk.Label(sym_frame, text="USDT", font=font_light, 
                  bg=COLORS["bg_main"], fg=COLORS["text_light"]).pack(side="left", padx=(5,0))
 
+        # [NEW] แสดงรูปภาพต่อท้าย
+        self.icon_image = self.load_icon(base_asset) # โหลดรูป
+        if self.icon_image:
+            tk.Label(sym_frame, image=self.icon_image, bg=COLORS["bg_main"]).pack(side="left", padx=15)
+
+        # Price Box
         price_box = tk.Frame(info_row, bg=COLORS["text_dark"], padx=15, pady=5)
         price_box.pack(side="right")
         self.lbl_price = tk.Label(price_box, text="$ ---", font=FONTS["h2"], 
@@ -279,6 +290,19 @@ class ProDetailPage(tk.Frame):
         threading.Thread(target=self.start_ws, daemon=True).start()
         threading.Thread(target=self.update_24h_stats, daemon=True).start()
 
+    # [NEW] ฟังก์ชันโหลดไอคอนเหรียญ
+    def load_icon(self, symbol):
+        try:
+            for ext in [".png", ".jpg", ".jpeg"]:
+                file_path = f"{symbol}{ext}"
+                if os.path.exists(file_path):
+                    pil_img = Image.open(file_path)
+                    pil_img = pil_img.resize((35, 35), Image.Resampling.LANCZOS)
+                    return ImageTk.PhotoImage(pil_img)
+        except Exception as e:
+            print(f"Error loading icon: {e}")
+        return None
+
     def update_layout(self):
         self.book_wrap.pack_forget()
         self.trade_wrap.pack_forget()
@@ -300,10 +324,8 @@ class ProDetailPage(tk.Frame):
     def update_tf_buttons(self):
         for tf, btn in self.tf_buttons.items():
             if tf == self.current_interval:
-                # Active: สีน้ำตาลเข้ม พื้นขาว (ตามเดิม)
                 btn.config(bg=COLORS["text_dark"], fg=COLORS["white"])
             else:
-                # [แก้ไข] Inactive: พื้นน้ำตาลอ่อน (shadow) ตัวน้ำตาลเข้ม (text_dark)
                 btn.config(bg=COLORS["shadow"], fg=COLORS["text_dark"])
 
     def fetch_chart(self):
@@ -362,12 +384,12 @@ class ProDetailPage(tk.Frame):
         self.is_running = False
         super().destroy()
 
-
+# --- MAIN APP ---
 class CryptoApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Cryptocurrency Dashboard")
-        self.geometry("1200x840")
+        self.title("Costra Bakery Crypto")
+        self.geometry("1200x842")
         self.configure(bg=COLORS["bg_main"])
         
         self.sidebar = tk.Frame(self, bg=COLORS["card_bg"], width=90)
