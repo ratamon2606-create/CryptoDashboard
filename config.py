@@ -1,34 +1,31 @@
 # config.py
 
-COINS_OPTIONS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT"]
+COINS_OPTIONS = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "ADAUSDT", "DOGEUSDT", "DOTUSDT"]
 
-# --- Costra Bakery Theme Palette ---
 COLORS = {
-    "bg_main": "#F8F4E3",       # ครีม (พื้นหลังแอพ)
-    "card_bg": "#FFFFFF",       # ขาว (พื้นหลังการ์ด)
-    "shadow": "#E0D8C0",        # เทาครีมจางๆ (สำหรับเงา)
-    "text_dark": "#5A3E2B",     # น้ำตาลเข้ม (หัวข้อ)
-    "text_light": "#8C7B6E",    # น้ำตาลอ่อน (รายละเอียด)
-    "accent_blue": "#4A5C8C",   # น้ำเงิน (ปุ่มหลัก, ไอคอน)
-    "accent_brown": "#A07855",  # น้ำตาลส้ม (กราฟ, ปุ่มรอง)
+    "bg_main": "#F8F4E3",       
+    "card_bg": "#FFFFFF",       
+    "shadow": "#E0D8C0",        
+    "text_dark": "#5A3E2B",     
+    "text_light": "#8C7B6E",    
+    "accent_blue": "#4A5C8C",   
+    "accent_brown": "#A07855",  
+    "active_bg": "#D0E0F0",     # <--- (ใหม่) สีฟ้าอ่อนสำหรับเมนูที่เลือกอยู่
     
-    # สีเขียว-แดง สำหรับราคา (คงเดิม)
     "green": "#6d9760",         
     "red": "#b84040",          
     "white": "#ffffff",
 }
 
-# --- Font Settings ---
-# พยายามใช้ Helvetica ถ้าไม่มีระบบจะหาตัวอื่น
 FONT_FAMILY = "Helvetica" 
-
 FONTS = {
-    "h1": (FONT_FAMILY, 24, "bold"),    # หัวข้อใหญ่
-    "h2": (FONT_FAMILY, 18, "bold"),    # หัวข้อรอง
-    "body": (FONT_FAMILY, 12),          # เนื้อหาทั่วไป
+    "h1": (FONT_FAMILY, 24, "bold"),
+    "h2": (FONT_FAMILY, 18, "bold"),
+    "body": (FONT_FAMILY, 12),
     "body_bold": (FONT_FAMILY, 12, "bold"),
-    "small": (FONT_FAMILY, 10),         # ตัวเล็ก
-    "monospace": ("Consolas", 10),      # สำหรับตัวเลข Orderbook
+    "small": (FONT_FAMILY, 10),
+    "monospace": ("Consolas", 10), # ใช้ Consolas เพื่อให้ตัวเลข Orderbook ตรงกัน
 }
 
-SHADOW_OFFSET = 4  # ระยะห่างของเงา
+SHADOW_OFFSET = 4
+TIMEFRAMES = ["15m", "1h", "4h", "1d"] # ตัวเลือก Timeframe
