@@ -3,6 +3,7 @@ import threading
 import json
 import websocket
 from datetime import datetime
+from PIL import Image, ImageTk
 
 from config import COLORS, COINS_OPTIONS, FONTS, TIMEFRAMES
 from utils.binance_api import get_binance_ticker, get_klines
