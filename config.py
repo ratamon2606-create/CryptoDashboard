@@ -12,8 +12,8 @@ COLORS = {
     "accent_brown": "#A07855",  
     "active_bg": "#D0E0F0",     # <--- (ใหม่) สีฟ้าอ่อนสำหรับเมนูที่เลือกอยู่
     
-    "green": "#6d9760",         
-    "red": "#b84040",          
+    "green": "#709266",         
+    "red": "#b64444",          
     "white": "#ffffff",
 }
 
@@ -25,6 +25,7 @@ FONTS = {
     "body_bold": (FONT_FAMILY, 12, "bold"),
     "small": (FONT_FAMILY, 10),
     "monospace": ("Consolas", 10), # ใช้ Consolas เพื่อให้ตัวเลข Orderbook ตรงกัน
+    "stats": (FONT_FAMILY, 11, "bold"),
 }
 
 SHADOW_OFFSET = 4

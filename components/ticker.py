@@ -68,9 +68,10 @@ class PulseGraph(tk.Canvas):
             self.create_text(x_pos, target_y - 30 if pct >= 0 else target_y + 35, 
                              text=f"{pct:+.2f}%", fill=color, font=FONTS["body_bold"])
             
+            # --- แก้ตรงนี้: เปลี่ยนฟอนต์ชื่อเหรียญเป็น body_bold ---
             self.create_text(x_pos, self.H - 20, 
                              text=data['symbol'].replace("USDT",""), 
-                             fill=COLORS["text_light"], font=FONTS["body"])
+                             fill=COLORS["text_light"], font=FONTS["body_bold"]) # <--- ตัวหนา
 
         if len(coords) > 1:
             flat_coords = [item for sublist in coords for item in sublist]

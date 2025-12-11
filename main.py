@@ -1,4 +1,3 @@
-# main.py
 import tkinter as tk
 import threading
 import json
@@ -15,34 +14,32 @@ from components.technical import ChartPanel
 
 SELECTED_COINS = []
 
-# --- Helper Component: Header ---
+# --- Header ---
 class Header(tk.Frame):
     def __init__(self, parent, title="", show_time=True):
         super().__init__(parent, bg=COLORS["bg_main"])
+        
         if title:
             tk.Label(self, text=title, font=FONTS["h1"], 
                      bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(side="left", anchor="center")
+
         if show_time:
-            self.time_lbl = tk.Label(self, text="00:00", font=FONTS["body"], 
+            self.dt_lbl = tk.Label(self, text="Date | Time", font=FONTS["body"], 
                                      bg=COLORS["bg_main"], fg=COLORS["text_light"])
-            self.time_lbl.pack(side="right", padx=10)
-            self.date_lbl = tk.Label(self, text="Date", font=FONTS["body"], 
-                                     bg=COLORS["bg_main"], fg=COLORS["text_light"])
-            self.date_lbl.pack(side="right", padx=10)
+            self.dt_lbl.pack(side="right", padx=10)
             self.update_timer()
 
     def update_timer(self):
         now = datetime.now()
-        self.time_lbl.config(text=now.strftime("%H:%M:%S"))
-        self.date_lbl.config(text=now.strftime("%d %b %Y"))
+        dt_str = f"{now.strftime('%d %b %Y')}     |     {now.strftime('%H:%M:%S')}"
+        self.dt_lbl.config(text=dt_str)
         self.after(1000, self.update_timer)
 
-# --- PAGE 1: SELECTION (จัดกลางจอ) ---
+# --- PAGE 1: SELECTION ---
 class SelectionPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
-        # ใช้ container กลางจอ
         center_box = tk.Frame(self, bg=COLORS["bg_main"])
         center_box.place(relx=0.5, rely=0.5, anchor="center")
         
@@ -87,60 +84,101 @@ class SelectionPage(tk.Frame):
             self.btn_next.config(text=f"Select {3 - len(SELECTED_COINS)} more")
         return True
 
-# --- PAGE 2: HOME (มีแถบสรุป Portfolio) ---
+# --- PAGE 2: HOME ---
 class HomePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
-        # Header
         h = Header(self, show_time=True)
-        h.pack(fill="x", padx=40, pady=(30, 10))
+        h.pack(fill="x", padx=40, pady=(15, 0))
 
         tk.Label(self, text="Portfolio Overview", font=FONTS["h1"], 
-                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(10, 20), anchor="center")
+                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(0, 10), anchor="center")
         
-        # Graph
-        self.graph = PulseGraph(self, width=900, height=350)
-        self.graph.pack(pady=10)
+        # [จุดที่ต้องแก้ความสูง] แก้เลข height ตรงนี้ครับ
+        self.graph = PulseGraph(self, width=950, height=340) 
+        self.graph.pack(pady=(0, 5))
         
-        # Last Update (เอาลงมาต่ำๆ)
-        self.status_lbl = tk.Label(self, text="Loading data...", font=FONTS["small"], 
-                                   bg=COLORS["bg_main"], fg=COLORS["text_light"])
-        self.status_lbl.pack(side="bottom", pady=(5, 30))
+        # Stats Container
+        self.stats_container = tk.Frame(self, bg=COLORS["bg_main"])
+        self.stats_container.pack(fill="x", padx=40, pady=(20, 0)) 
+        
+        self.stats_container.columnconfigure(0, weight=1)
+        self.stats_container.columnconfigure(1, weight=1)
+        self.stats_container.columnconfigure(2, weight=1)
 
-        # Portfolio Bar (แถบสรุปสถานะ)
-        self.bar_portfolio = tk.Label(self, text="ANALYZING PORTFOLIO...", font=FONTS["h2"],
-                                      bg=COLORS["shadow"], fg=COLORS["text_light"], height=2)
-        self.bar_portfolio.pack(side="bottom", pady=(0, 30))
+        # Box 1
+        wrap1, inner1 = create_shadow_card(self.stats_container, padx=15, pady=10)
+        wrap1.grid(row=0, column=0, sticky="ew", padx=(0, 10))
+        tk.Label(inner1, text="Top Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
+        self.lbl_top_gainer = tk.Label(inner1, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["green"])
+        self.lbl_top_gainer.pack()
+
+        # Box 2
+        wrap2, inner2 = create_shadow_card(self.stats_container, padx=15, pady=10)
+        wrap2.grid(row=0, column=1, sticky="ew", padx=10)
+        self.status_inner = inner2 
+        self.lbl_overview = tk.Label(inner2, text="Overview", font=FONTS["small"],
+                                     bg=COLORS["card_bg"], fg=COLORS["text_light"])
+        self.lbl_overview.pack()
+        self.lbl_portfolio = tk.Label(inner2, text="ANALYZING...", font=FONTS["h2"],
+                                      bg=COLORS["card_bg"], fg=COLORS["text_dark"])
+        self.lbl_portfolio.pack()
+
+        # Box 3
+        wrap3, inner3 = create_shadow_card(self.stats_container, padx=15, pady=10)
+        wrap3.grid(row=0, column=2, sticky="ew", padx=(10, 0))
+        tk.Label(inner3, text="Worst Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
+        self.lbl_worst_loser = tk.Label(inner3, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["red"])
+        self.lbl_worst_loser.pack()
+
+        self.lbl_last_update = tk.Label(self, text="Loading data...", font=FONTS["small"], 
+                                        bg=COLORS["bg_main"], fg=COLORS["text_light"])
+        self.lbl_last_update.pack(side="bottom", pady=(5, 15))
 
         threading.Thread(target=self.load_data, daemon=True).start()
 
     def load_data(self):
         data_list = []
         total_change = 0
+        best_coin = None; worst_coin = None
+        max_pct = -9999; min_pct = 9999
         
         for symbol in SELECTED_COINS:
             ticker = get_binance_ticker(symbol)
             if ticker: 
                 data_list.append(ticker)
-                total_change += float(ticker['priceChangePercent'])
+                pct = float(ticker['priceChangePercent'])
+                total_change += pct
+                if pct > max_pct: max_pct = pct; best_coin = symbol.replace("USDT","")
+                if pct < min_pct: min_pct = pct; worst_coin = symbol.replace("USDT","")
         
-        # Logic สรุปสถานะพอร์ต
         if data_list:
             avg_change = total_change / len(data_list)
             if avg_change >= 0:
-                msg = f"YOUR PORTFOLIO LOOKS GOOD (+{avg_change:.2f}%)"
-                color_bg = COLORS["accent_brown"]
+                msg = f"GOOD (+{avg_change:.2f}%)"
+                bg_color = COLORS["accent_brown"]
+                fg_color = COLORS["white"]
+                overview_fg = COLORS["white"] 
             else:
-                msg = f"YOUR PORTFOLIO LOOKS BAD ({avg_change:.2f}%)"
-                color_bg = COLORS["text_dark"] # หรือสีเทาเข้ม
+                msg = f"BAD ({avg_change:.2f}%)"
+                bg_color = COLORS["red"]
+                fg_color = COLORS["white"]
+                overview_fg = COLORS["white"] 
             
-            self.after(0, lambda: self.bar_portfolio.config(text=msg, bg=color_bg, fg=COLORS["white"]))
+            self.after(0, lambda: self.update_ui(msg, bg_color, fg_color, overview_fg, best_coin, max_pct, worst_coin, min_pct))
         
         self.after(0, lambda: self.graph.draw_graph(data_list))
-        self.after(0, lambda: self.status_lbl.config(text=f"Last Update: {datetime.now().strftime('%H:%M:%S')}"))
+        self.after(0, lambda: self.lbl_last_update.config(text=f"Last Update: {datetime.now().strftime('%H:%M:%S')}"))
 
-# --- PAGE 3: DETAILS (มี Toggle + 24h Data) ---
+    def update_ui(self, status_text, bg, fg, ov_fg, best, max_p, worst, min_p):
+        self.status_inner.config(bg=bg)
+        self.lbl_portfolio.config(text=status_text, bg=bg, fg=fg)
+        self.lbl_overview.config(bg=bg, fg=ov_fg) 
+        self.lbl_top_gainer.config(text=f"{best} ({max_p:+.2f}%)")
+        self.lbl_worst_loser.config(text=f"{worst} ({min_p:+.2f}%)")
+
+# --- PAGE 3: DETAILS ---
 class ProDetailPage(tk.Frame):
     def __init__(self, parent, symbol):
         super().__init__(parent, bg=COLORS["bg_main"])
@@ -149,107 +187,108 @@ class ProDetailPage(tk.Frame):
         self.is_running = True
         self.current_interval = "1h"
         
-        # Header
         h = Header(self, show_time=True)
-        h.pack(fill="x", padx=30, pady=(20, 0))
+        h.pack(fill="x", padx=30, pady=(15, 0)) 
 
-        # --- Top Section: Symbol & Price & 24h Data ---
-        top = tk.Frame(self, bg=COLORS["bg_main"])
-        top.pack(fill="x", padx=30, pady=15)
-        
-        # Left: Name & Timeframe
-        left_top = tk.Frame(top, bg=COLORS["bg_main"])
-        left_top.pack(side="left")
-        
-        tk.Label(left_top, text=self.symbol_upper, font=FONTS["h1"], 
-                 bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(anchor="w")
+        toggle_frame = tk.Frame(h, bg=COLORS["bg_main"])
+        toggle_frame.pack(side="left")
 
-        tf_frame = tk.Frame(left_top, bg=COLORS["bg_main"])
-        tf_frame.pack(anchor="w", pady=5)
+        self.var_book = tk.BooleanVar(value=True)
+        self.var_trade = tk.BooleanVar(value=True)
+        for text, var in [("Trades", self.var_trade), ("Order Book", self.var_book)]:
+            tk.Checkbutton(toggle_frame, text=text, variable=var, command=self.update_layout,
+                           bg=COLORS["bg_main"], fg=COLORS["text_dark"], 
+                           activebackground=COLORS["bg_main"], selectcolor=COLORS["bg_main"],
+                           font=FONTS["body"]).pack(side="right", padx=5)
+
+        # INFO AREA
+        top_container = tk.Frame(self, bg=COLORS["bg_main"])
+        top_container.pack(fill="x", padx=30, pady=(20, 5))
+
+        info_row = tk.Frame(top_container, bg=COLORS["bg_main"])
+        info_row.pack(fill="x")
+        
+        sym_frame = tk.Frame(info_row, bg=COLORS["bg_main"])
+        sym_frame.pack(side="left")
+        
+        base_asset = self.symbol_upper.replace("USDT", "")
+        tk.Label(sym_frame, text=base_asset, font=FONTS["h1"], 
+                 bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(side="left")
+        font_light = (FONTS["h1"][0], FONTS["h1"][1], "normal")
+        tk.Label(sym_frame, text="USDT", font=font_light, 
+                 bg=COLORS["bg_main"], fg=COLORS["text_light"]).pack(side="left", padx=(5,0))
+
+        price_box = tk.Frame(info_row, bg=COLORS["text_dark"], padx=15, pady=5)
+        price_box.pack(side="right")
+        self.lbl_price = tk.Label(price_box, text="$ ---", font=FONTS["h2"], 
+                                  bg=COLORS["text_dark"], fg=COLORS["bg_main"])
+        self.lbl_price.pack()
+        
+        control_row = tk.Frame(top_container, bg=COLORS["bg_main"])
+        control_row.pack(fill="x", pady=(15, 0))
+
+        tf_frame = tk.Frame(control_row, bg=COLORS["bg_main"])
+        tf_frame.pack(side="left")
         self.tf_buttons = {}
         for tf in TIMEFRAMES:
             btn = tk.Button(tf_frame, text=tf, font=FONTS["small"], bd=0, 
-                            cursor="hand2", padx=8, pady=0,
+                            cursor="hand2", padx=10, pady=2,
                             command=lambda t=tf: self.change_timeframe(t))
             btn.pack(side="left", padx=2)
             self.tf_buttons[tf] = btn
         self.update_tf_buttons()
 
-        # Right: Price & 24h Stats
-        right_top = tk.Frame(top, bg=COLORS["bg_main"])
-        right_top.pack(side="right")
-        
-        # Price Box
-        price_box = tk.Frame(right_top, bg=COLORS["text_dark"], padx=15, pady=5)
-        price_box.pack(anchor="e")
-        self.lbl_price = tk.Label(price_box, text="---", font=FONTS["h2"], 
-                                  bg=COLORS["text_dark"], fg=COLORS["bg_main"])
-        self.lbl_price.pack()
-        
-        # 24h Stats (Volume, High, Low)
-        stats_frame = tk.Frame(right_top, bg=COLORS["bg_main"])
-        stats_frame.pack(anchor="e", pady=5)
-        
-        self.lbl_stats = tk.Label(stats_frame, text="Vol: - | H: - | L: -", 
-                                  font=FONTS["small"], bg=COLORS["bg_main"], fg=COLORS["text_light"])
-        self.lbl_stats.pack()
+        self.lbl_stats = tk.Label(control_row, text="Vol: -   High: -   Low: -", 
+                                  font=FONTS["stats"],
+                                  bg=COLORS["bg_main"], fg=COLORS["text_light"])
+        self.lbl_stats.pack(side="right")
 
-        # --- Toggle Buttons (อยู่เหนือ Content) ---
-        toggle_bar = tk.Frame(self, bg=COLORS["bg_main"])
-        toggle_bar.pack(fill="x", padx=30, pady=(0, 10))
-        
-        self.var_book = tk.BooleanVar(value=True)
-        self.var_trade = tk.BooleanVar(value=True)
-        
-        # สร้าง Checkbutton แบบเรียบๆ
-        for text, var in [("Show Order Book", self.var_book), ("Show Trades", self.var_trade)]:
-            cb = tk.Checkbutton(toggle_bar, text=text, variable=var, command=self.update_layout,
-                                bg=COLORS["bg_main"], fg=COLORS["text_dark"], 
-                                activebackground=COLORS["bg_main"], selectcolor=COLORS["bg_main"],
-                                font=FONTS["body"])
-            cb.pack(side="left", padx=10)
-
-        # --- Content Grid ---
+        # CONTENT AREA
         self.content = tk.Frame(self, bg=COLORS["bg_main"])
-        self.content.pack(fill="both", expand=True, padx=30, pady=10)
+        self.content.pack(fill="both", expand=True, padx=30, pady=(5, 20))
         self.content.columnconfigure(0, weight=3)
         self.content.columnconfigure(1, weight=1)
 
-        # Chart
         self.chart_wrap, self.chart_inner = create_shadow_card(self.content, padx=5, pady=5)
-        self.chart_wrap.grid(row=0, column=0, sticky="nsew", padx=(0, 20), pady=10)
+        self.chart_wrap.grid(row=0, column=0, sticky="nsew", padx=(0, 20), pady=0)
         self.chart_panel = ChartPanel(self.chart_inner)
         self.chart_panel.pack(fill="both", expand=True)
 
-        # Side Panel (OrderBook + Trades)
         self.side_panel = tk.Frame(self.content, bg=COLORS["bg_main"])
-        self.side_panel.grid(row=0, column=1, sticky="nsew", pady=10)
+        self.side_panel.grid(row=0, column=1, sticky="nsew", pady=0)
         
         self.book_wrap, self.book_inner = create_shadow_card(self.side_panel, padx=5, pady=5)
         self.book_panel = OrderBookPanel(self.book_inner)
         
         self.trade_wrap, self.trade_inner = create_shadow_card(self.side_panel, padx=5, pady=5)
         self.trade_panel = TradeFeedPanel(self.trade_inner)
+
+        self.action_wrap, self.action_inner = create_shadow_card(self.side_panel, padx=10, pady=10)
+        change_container = tk.Frame(self.action_inner, bg=COLORS["card_bg"])
+        change_container.pack(fill="both", expand=True)
+        tk.Label(change_container, text="24h Change", font=FONTS["small"], 
+                 bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack(pady=(5,0))
+        self.lbl_big_change = tk.Label(change_container, text="---%", font=FONTS["h1"], 
+                                       bg=COLORS["card_bg"], fg=COLORS["text_dark"])
+        self.lbl_big_change.pack(pady=(0,5))
         
-        self.update_layout() # เรียกครั้งแรกเพื่อจัดวาง
+        self.update_layout()
 
         threading.Thread(target=self.fetch_chart, daemon=True).start()
         threading.Thread(target=self.start_ws, daemon=True).start()
-        threading.Thread(target=self.update_24h_stats, daemon=True).start() # Thread ใหม่สำหรับดึง stats
+        threading.Thread(target=self.update_24h_stats, daemon=True).start()
 
     def update_layout(self):
-        # ล้าง Grid เก่าออกก่อน
         self.book_wrap.pack_forget()
         self.trade_wrap.pack_forget()
-        
-        # ตรวจสอบตัวแปรแล้ว pack ใหม่
+        self.action_wrap.pack_forget()
         if self.var_book.get():
             self.book_wrap.pack(fill="both", expand=True, pady=(0, 10))
             self.book_panel.pack(fill="both", expand=True)
-            
         if self.var_trade.get():
-            self.trade_wrap.pack(fill="both", expand=True)
+            self.trade_wrap.pack(fill="both", expand=True, pady=(0, 10))
             self.trade_panel.pack(fill="both", expand=True)
+        self.action_wrap.pack(fill="x", pady=0)
 
     def change_timeframe(self, tf):
         if self.current_interval == tf: return
@@ -260,26 +299,34 @@ class ProDetailPage(tk.Frame):
     def update_tf_buttons(self):
         for tf, btn in self.tf_buttons.items():
             if tf == self.current_interval:
+                # Active: สีน้ำตาลเข้ม พื้นขาว (ตามเดิม)
                 btn.config(bg=COLORS["text_dark"], fg=COLORS["white"])
             else:
-                btn.config(bg=COLORS["bg_main"], fg=COLORS["text_dark"])
+                # [แก้ไข] Inactive: พื้นน้ำตาลอ่อน (shadow) ตัวน้ำตาลเข้ม (text_dark)
+                btn.config(bg=COLORS["shadow"], fg=COLORS["text_dark"])
 
     def fetch_chart(self):
         klines = get_klines(self.symbol_upper, self.current_interval)
         self.after(0, lambda: self.chart_panel.draw_chart(klines))
     
     def update_24h_stats(self):
-        # ดึงข้อมูล High/Low/Vol ทุกๆ 5 วินาที
         while self.is_running:
             ticker = get_binance_ticker(self.symbol_upper)
             if ticker:
                 vol = float(ticker['volume'])
                 high = float(ticker['highPrice'])
                 low = float(ticker['lowPrice'])
-                text = f"Vol: {vol:,.0f} | High: {high:,.2f} | Low: {low:,.2f}"
-                self.after(0, lambda: self.lbl_stats.config(text=text))
+                pct = float(ticker['priceChangePercent'])
+                text_stats = f"Vol: {vol:,.0f}   High: {high:,.2f}   Low: {low:,.2f}"
+                text_pct = f"{pct:+.2f}%"
+                color_pct = COLORS["green"] if pct >= 0 else COLORS["red"]
+                self.after(0, lambda t=text_stats, p=text_pct, c=color_pct: self._update_labels(t, p, c))
             import time
             time.sleep(5)
+
+    def _update_labels(self, stats_text, pct_text, pct_color):
+        self.lbl_stats.config(text=stats_text)
+        self.lbl_big_change.config(text=pct_text, fg=pct_color)
 
     def start_ws(self):
         def on_message(ws, message):
@@ -288,8 +335,7 @@ class ProDetailPage(tk.Frame):
                 response = json.loads(message)
                 data = response.get('data', response)
                 self.after(0, lambda: self.process_ws_data(data))     
-            except Exception as e:
-                print(f"WS Parsing Error: {e}")
+            except: pass
 
         stream_names = f"{self.symbol}@trade/{self.symbol}@depth5@100ms"
         url = f"wss://stream.binance.com:9443/stream?streams={stream_names}"
@@ -300,15 +346,13 @@ class ProDetailPage(tk.Frame):
         try:
             if 'p' in data: 
                 price = float(data['p'])
-                self.lbl_price.config(text=f"{price:,.2f}")
-                # เช็คก่อนว่า Trade Panel แสดงอยู่หรือไม่
+                self.lbl_price.config(text=f"$ {price:,.2f}")
                 if self.var_trade.get() and hasattr(self, 'trade_panel'):
                     self.trade_panel.add(data['p'], data['q'], data['m']) 
 
             bids = data.get('bids') or data.get('b')
             asks = data.get('asks') or data.get('a')
             if bids and asks:
-                # เช็คก่อนว่า Book Panel แสดงอยู่หรือไม่
                 if self.var_book.get() and hasattr(self, 'book_panel'):
                     self.book_panel.update_data(bids, asks)
         except: pass
@@ -317,12 +361,12 @@ class ProDetailPage(tk.Frame):
         self.is_running = False
         super().destroy()
 
-# --- MAIN APP (เหมือนเดิม แต่ตรวจสอบ Sidebar) ---
+
 class CryptoApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Costra Bakery Crypto")
-        self.geometry("1200x800")
+        self.title("Cryptocurrency Dashboard")
+        self.geometry("1200x840")
         self.configure(bg=COLORS["bg_main"])
         
         self.sidebar = tk.Frame(self, bg=COLORS["card_bg"], width=90)
@@ -346,7 +390,7 @@ class CryptoApp(tk.Tk):
         btn_home = tk.Button(self.sidebar, text="🏠", font=("Arial", 20), 
                              bg=bg_home, fg=COLORS["accent_blue"], bd=0, 
                              command=self.show_home_page, cursor="hand2")
-        btn_home.pack(fill="x", pady=(30, 20), ipady=10)
+        btn_home.pack(fill="x", pady=(20, 10), ipady=10)
         
         tk.Frame(self.sidebar, height=1, bg=COLORS["shadow"]).pack(fill="x", padx=15)
         
@@ -366,7 +410,7 @@ class CryptoApp(tk.Tk):
         btn_change = tk.Button(self.sidebar, text="✎ Coins", font=FONTS["body"], 
                                bg=COLORS["accent_brown"], fg=COLORS["white"], bd=0,
                                command=self.show_selection_page, cursor="hand2")
-        btn_change.pack(side="bottom", fill="x", pady=20, padx=10, ipady=5)
+        btn_change.pack(side="bottom", fill="x", pady=(0, 20), padx=10, ipady=5)
 
     def show_selection_page(self):
         self.sidebar.pack_forget()
