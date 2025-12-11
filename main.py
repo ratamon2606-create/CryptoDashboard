@@ -2,8 +2,8 @@ import tkinter as tk
 import threading
 import json
 import websocket
-import os # [NEW] เพิ่ม os เพื่อเช็คไฟล์
-from PIL import Image, ImageTk # [NEW] เพิ่ม PIL เพื่อโหลดรูป
+import os
+from PIL import Image, ImageTk
 from datetime import datetime
 
 from config import COLORS, COINS_OPTIONS, FONTS, TIMEFRAMES
@@ -91,32 +91,42 @@ class HomePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
-        # Header
+        # 1. Header (ติดบนสุดเหมือนเดิม)
         h = Header(self, show_time=True)
-        h.pack(fill="x", padx=40, pady=(15, 0))
+        h.pack(fill="x", padx=40, pady=(50, 5))
 
-        tk.Label(self, text="Portfolio Overview", font=FONTS["h1"], 
-                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(0, 10), anchor="center")
+        # ============================================================
+        # [NEW] Center Wrapper: สร้างกล่องเปล่าๆ มาหุ้มเนื้อหาตรงกลาง
+        # expand=True จะดันให้กล่องนี้ลอยอยู่กึ่งกลางพื้นที่ว่าง
+        # ============================================================
+        self.center_wrapper = tk.Frame(self, bg=COLORS["bg_main"])
+        self.center_wrapper.pack(expand=True, fill="both")
+
+        # 2. Title (ใส่ใน center_wrapper)
+        tk.Label(self.center_wrapper, text="Portfolio Overview", font=FONTS["h1"], 
+                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(50, 15), anchor="center")
         
-        self.graph = PulseGraph(self, width=950, height=340) 
-        self.graph.pack(pady=(0, 5))
+        # 3. Graph (ใส่ใน center_wrapper)
+        # height=380 กำลังดี ไม่ยาวเกินไปจนตกจอ
+        self.graph = PulseGraph(self.center_wrapper, width=950, height=380) 
+        self.graph.pack(pady=(0, 15))
         
-        # Stats Container
-        self.stats_container = tk.Frame(self, bg=COLORS["bg_main"])
-        self.stats_container.pack(fill="x", padx=40, pady=(20, 0)) 
+        # 4. Stats Container (ใส่ใน center_wrapper)
+        self.stats_container = tk.Frame(self.center_wrapper, bg=COLORS["bg_main"])
+        self.stats_container.pack(fill="x", padx=40, pady=(15, 0)) 
         
         self.stats_container.columnconfigure(0, weight=1)
         self.stats_container.columnconfigure(1, weight=1)
         self.stats_container.columnconfigure(2, weight=1)
 
-        # Box 1
+        # Box 1: Top Gainer
         wrap1, inner1 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap1.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         tk.Label(inner1, text="Top Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
         self.lbl_top_gainer = tk.Label(inner1, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["green"])
         self.lbl_top_gainer.pack()
 
-        # Box 2
+        # Box 2: Overview
         wrap2, inner2 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap2.grid(row=0, column=1, sticky="ew", padx=10)
         self.status_inner = inner2 
@@ -127,16 +137,17 @@ class HomePage(tk.Frame):
                                       bg=COLORS["card_bg"], fg=COLORS["text_dark"])
         self.lbl_portfolio.pack()
 
-        # Box 3
+        # Box 3: Worst Performer
         wrap3, inner3 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap3.grid(row=0, column=2, sticky="ew", padx=(10, 0))
         tk.Label(inner3, text="Worst Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
         self.lbl_worst_loser = tk.Label(inner3, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["red"])
         self.lbl_worst_loser.pack()
 
+        # 5. Footer (ติดล่างสุดเหมือนเดิม)
         self.lbl_last_update = tk.Label(self, text="Loading data...", font=FONTS["small"], 
                                         bg=COLORS["bg_main"], fg=COLORS["text_light"])
-        self.lbl_last_update.pack(side="bottom", pady=(5, 15))
+        self.lbl_last_update.pack(side="bottom", pady=20)
 
         threading.Thread(target=self.load_data, daemon=True).start()
 
@@ -214,22 +225,16 @@ class ProDetailPage(tk.Frame):
         sym_frame.pack(side="left")
         
         base_asset = self.symbol_upper.replace("USDT", "")
-        
-        # ชื่อเหรียญ (BTC)
         tk.Label(sym_frame, text=base_asset, font=FONTS["h1"], 
                  bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(side="left")
-        
-        # ชื่อคู่ (USDT)
         font_light = (FONTS["h1"][0], FONTS["h1"][1], "normal")
         tk.Label(sym_frame, text="USDT", font=font_light, 
                  bg=COLORS["bg_main"], fg=COLORS["text_light"]).pack(side="left", padx=(5,0))
 
-        # [NEW] แสดงรูปภาพต่อท้าย
-        self.icon_image = self.load_icon(base_asset) # โหลดรูป
+        self.icon_image = self.load_icon(base_asset)
         if self.icon_image:
             tk.Label(sym_frame, image=self.icon_image, bg=COLORS["bg_main"]).pack(side="left", padx=15)
 
-        # Price Box
         price_box = tk.Frame(info_row, bg=COLORS["text_dark"], padx=15, pady=5)
         price_box.pack(side="right")
         self.lbl_price = tk.Label(price_box, text="$ ---", font=FONTS["h2"], 
@@ -290,7 +295,6 @@ class ProDetailPage(tk.Frame):
         threading.Thread(target=self.start_ws, daemon=True).start()
         threading.Thread(target=self.update_24h_stats, daemon=True).start()
 
-    # [NEW] ฟังก์ชันโหลดไอคอนเหรียญ
     def load_icon(self, symbol):
         try:
             for ext in [".png", ".jpg", ".jpeg"]:
@@ -388,7 +392,7 @@ class ProDetailPage(tk.Frame):
 class CryptoApp(tk.Tk):
     def __init__(self):
         super().__init__()
-        self.title("Costra Bakery Crypto")
+        self.title("Cryptocurrency Dashboard")
         self.geometry("1200x842")
         self.configure(bg=COLORS["bg_main"])
         
