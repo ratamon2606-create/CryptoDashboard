@@ -1,11 +1,11 @@
 # components/ticker.py
 import tkinter as tk
 import os
-from PIL import Image, ImageTk  # ต้องใช้บรรทัดนี้
+from PIL import Image, ImageTk 
 from config import COLORS, FONTS
 from utils.ui_helpers import create_shadow_card
 
-# ... (Class CryptoCard เหมือนเดิม ไม่ต้องแก้) ...
+# ... CryptoCard เหมือนเดิม ...
 class CryptoCard(tk.Frame):
     def __init__(self, parent, symbol, select_callback):
         super().__init__(parent, bg=COLORS["bg_main"]) 
@@ -32,56 +32,60 @@ class CryptoCard(tk.Frame):
             else:
                 self.content.config(highlightthickness=0)
 
-
+# ... [EDITED] PulseGraph ...
 class PulseGraph(tk.Canvas):
-    """กราฟชีพจร (หน้า 2)"""
+    """กราฟชีพจร (หน้า 2) แบบ Responsive"""
     def __init__(self, parent, width=600, height=250):
-        super().__init__(parent, width=width, height=height, bg=COLORS["bg_main"], highlightthickness=0)
-        self.W = width
+        # ลบ width=width ออกจากการเรียก super เพื่อให้มันจัดการเอง
+        super().__init__(parent, height=height, bg=COLORS["bg_main"], highlightthickness=0)
+        
         self.H = height
         self.center_y = height / 2 - 20 
-        
         self.image_cache = {} 
+        self.cached_data = [] # เก็บข้อมูลล่าสุดไว้ใช้วาดใหม่ตอน Resize
+
+        # Bind event เมื่อขนาด Canvas เปลี่ยน (เช่น ย่อขยายจอ)
+        self.bind("<Configure>", self.on_resize)
+
+    def on_resize(self, event):
+        """เมื่อขนาดเปลี่ยน ให้วาดกราฟใหม่ด้วยข้อมูลเดิม"""
+        if self.cached_data:
+            self.draw_graph(self.cached_data)
 
     def get_icon(self, symbol):
-        """โหลดรูปและบังคับขนาดให้เท่ากัน"""
+        # ... (โค้ดส่วน get_icon เหมือนเดิมเป๊ะ) ...
         clean_symbol = symbol.replace("USDT", "").upper()
-        
         if clean_symbol in self.image_cache:
             return self.image_cache[clean_symbol]
-        
         try:
             for ext in [".png", ".jpg", ".jpeg"]:
                 file_path = f"{clean_symbol}{ext}"
                 if os.path.exists(file_path):
-                    pil_img = Image.open(file_path)
-                    
-                    # ==========================================
-                    # [จุดสำคัญ] บังคับขนาดตรงนี้ครับ 
-                    # ==========================================
-                    # เปลี่ยนเลข (30, 30) เป็นขนาดที่ต้องการได้เลย
-                    # ไม่ว่ารูปเดิมจะมาไซส์ไหน มันจะถูกบีบให้เหลือเท่านี้
                     forced_size = (50, 50) 
-                    pil_img = pil_img.resize(forced_size, Image.Resampling.LANCZOS)
-                    
+                    pil_img = Image.open(file_path).resize(forced_size, Image.Resampling.LANCZOS)
                     tk_img = ImageTk.PhotoImage(pil_img)
                     self.image_cache[clean_symbol] = tk_img
                     return tk_img
-                    
         except Exception as e:
-            print(f"Error loading icon for {clean_symbol}: {e}")
-            
+            print(f"Error loading icon: {e}")
         return None
 
     def draw_graph(self, coin_data_list):
+        self.cached_data = coin_data_list # บันทึกข้อมูลไว้
         self.delete("all")
-        self.create_line(20, self.center_y, self.W - 20, self.center_y, 
+
+        # หาความกว้างจริง ณ ปัจจุบัน
+        current_w = self.winfo_width()
+        if current_w < 100: current_w = 950 # ค่า Default กันพลาดตอนเริ่มโปรแกรม
+
+        self.create_line(20, self.center_y, current_w - 20, self.center_y, 
                          fill=COLORS["text_light"], dash=(4, 4))
         
         if not coin_data_list: return
         
         num_points = len(coin_data_list)
-        segment_width = (self.W - 100) / max(1, num_points - 1)
+        # คำนวณระยะห่างใหม่ตามความกว้างหน้าจอจริง
+        segment_width = (current_w - 100) / max(1, num_points - 1)
         start_x = 50
         
         coords = []
@@ -96,20 +100,15 @@ class PulseGraph(tk.Canvas):
             icon = self.get_icon(symbol)
 
             if icon:
-                # วาดรูป (บังคับขนาดมาแล้วจาก get_icon)
                 self.create_image(x_pos, target_y, image=icon, anchor="center")
             else:
-                # วาดจุด (กรณีหารูปไม่เจอ)
                 color = COLORS["green"] if pct >= 0 else COLORS["red"]
                 self.create_oval(x_pos-6, target_y-6, x_pos+6, target_y+6, 
                                  fill=color, outline=COLORS["white"], width=2)
             
             color = COLORS["green"] if pct >= 0 else COLORS["red"]
-            
-            # ขยับตัวเลขห่างจากรูปหน่อย (เพราะรูปอาจจะใหญ่กว่าจุดเดิม)
             self.create_text(x_pos, target_y - 35 if pct >= 0 else target_y + 40, 
                              text=f"{pct:+.2f}%", fill=color, font=FONTS["body_bold"])
-            
             self.create_text(x_pos, self.H - 20, 
                              text=symbol.replace("USDT",""), 
                              fill=COLORS["text_light"], font=FONTS["body_bold"])
