@@ -1,3 +1,4 @@
+# main.py
 import tkinter as tk
 import threading
 import json
@@ -16,15 +17,40 @@ from components.technical import ChartPanel
 
 SELECTED_COINS = []
 
-# --- Header ---
+# --- [NEW] Scrollable Frame Class ---
+class ScrollableFrame(tk.Frame):
+    def __init__(self, container, bg_color, *args, **kwargs):
+        super().__init__(container, bg=bg_color, *args, **kwargs)
+        
+        self.canvas = tk.Canvas(self, bg=bg_color, highlightthickness=0)
+        self.scrollbar = tk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
+        self.scrollable_content = tk.Frame(self.canvas, bg=bg_color)
+
+        self.scrollable_content.bind(
+            "<Configure>",
+            lambda e: self.canvas.configure(scrollregion=self.canvas.bbox("all"))
+        )
+
+        self.canvas_window = self.canvas.create_window((0, 0), window=self.scrollable_content, anchor="nw")
+
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        self.canvas.pack(side="left", fill="both", expand=True)
+        self.scrollbar.pack(side="right", fill="y")
+        
+        # ทำให้เนื้อหาขยายเต็มความกว้าง Canvas
+        self.canvas.bind("<Configure>", self.on_canvas_configure)
+
+    def on_canvas_configure(self, event):
+        self.canvas.itemconfig(self.canvas_window, width=event.width)
+
+# --- Header (เหมือนเดิม) ---
 class Header(tk.Frame):
     def __init__(self, parent, title="", show_time=True):
         super().__init__(parent, bg=COLORS["bg_main"])
-        
         if title:
             tk.Label(self, text=title, font=FONTS["h1"], 
                      bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(side="left", anchor="center")
-
         if show_time:
             self.dt_lbl = tk.Label(self, text="Date | Time", font=FONTS["body"], 
                                      bg=COLORS["bg_main"], fg=COLORS["text_light"])
@@ -37,13 +63,14 @@ class Header(tk.Frame):
         self.dt_lbl.config(text=dt_str)
         self.after(1000, self.update_timer)
 
-# --- PAGE 1: SELECTION ---
+# --- PAGE 1: SELECTION (เหมือนเดิม) ---
 class SelectionPage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
+        # ใช้ Grid Center เหมือนเดิม แต่จะอยู่ภายใน Scrollable Frame
         center_box = tk.Frame(self, bg=COLORS["bg_main"])
-        center_box.place(relx=0.5, rely=0.5, anchor="center")
+        center_box.pack(expand=True, pady=50) # เพิ่ม pady ให้ดูไม่ชิดขอบเกินไป
         
         tk.Label(center_box, text="Select your coins", font=FONTS["h1"], 
                  bg=COLORS["bg_main"], fg=COLORS["text_dark"]).pack(pady=(0, 5))
@@ -86,32 +113,25 @@ class SelectionPage(tk.Frame):
             self.btn_next.config(text=f"Select {3 - len(SELECTED_COINS)} more")
         return True
 
-# --- PAGE 2: HOME ---
+# --- PAGE 2: HOME (ปรับปรุง Layout ให้ยืดหยุ่น) ---
 class HomePage(tk.Frame):
     def __init__(self, parent, controller):
         super().__init__(parent, bg=COLORS["bg_main"])
         
-        # 1. Header (ติดบนสุดเหมือนเดิม)
         h = Header(self, show_time=True)
-        h.pack(fill="x", padx=40, pady=(50, 5))
+        h.pack(fill="x", padx=40, pady=(30, 5))
 
-        # ============================================================
-        # [NEW] Center Wrapper: สร้างกล่องเปล่าๆ มาหุ้มเนื้อหาตรงกลาง
-        # expand=True จะดันให้กล่องนี้ลอยอยู่กึ่งกลางพื้นที่ว่าง
-        # ============================================================
         self.center_wrapper = tk.Frame(self, bg=COLORS["bg_main"])
-        self.center_wrapper.pack(expand=True, fill="both")
+        self.center_wrapper.pack(fill="both", expand=True, padx=20) # ลด padding ด้านข้างลงเพื่อให้มีที่หายใจ
 
-        # 2. Title (ใส่ใน center_wrapper)
         tk.Label(self.center_wrapper, text="Portfolio Overview", font=FONTS["h1"], 
-                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(50, 15), anchor="center")
+                 fg=COLORS["text_dark"], bg=COLORS["bg_main"]).pack(pady=(20, 15), anchor="center")
         
-        # 3. Graph (ใส่ใน center_wrapper)
-        # height=380 กำลังดี ไม่ยาวเกินไปจนตกจอ
-        self.graph = PulseGraph(self.center_wrapper, width=950, height=380) 
-        self.graph.pack(pady=(0, 15))
+        # [EDIT] ไม่กำหนด width ตายตัว แต่ให้มัน fill="x"
+        self.graph = PulseGraph(self.center_wrapper, height=380) 
+        self.graph.pack(fill="x", pady=(0, 15), padx=20) # fill="x" คือหัวใจสำคัญ
         
-        # 4. Stats Container (ใส่ใน center_wrapper)
+        # Grid Stats
         self.stats_container = tk.Frame(self.center_wrapper, bg=COLORS["bg_main"])
         self.stats_container.pack(fill="x", padx=40, pady=(15, 0)) 
         
@@ -119,14 +139,13 @@ class HomePage(tk.Frame):
         self.stats_container.columnconfigure(1, weight=1)
         self.stats_container.columnconfigure(2, weight=1)
 
-        # Box 1: Top Gainer
+        # ... (ส่วนสร้าง Box 1, 2, 3 เหมือนเดิม) ...
         wrap1, inner1 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap1.grid(row=0, column=0, sticky="ew", padx=(0, 10))
         tk.Label(inner1, text="Top Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
         self.lbl_top_gainer = tk.Label(inner1, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["green"])
         self.lbl_top_gainer.pack()
 
-        # Box 2: Overview
         wrap2, inner2 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap2.grid(row=0, column=1, sticky="ew", padx=10)
         self.status_inner = inner2 
@@ -137,14 +156,12 @@ class HomePage(tk.Frame):
                                       bg=COLORS["card_bg"], fg=COLORS["text_dark"])
         self.lbl_portfolio.pack()
 
-        # Box 3: Worst Performer
         wrap3, inner3 = create_shadow_card(self.stats_container, padx=15, pady=10)
         wrap3.grid(row=0, column=2, sticky="ew", padx=(10, 0))
         tk.Label(inner3, text="Worst Performer", font=FONTS["small"], bg=COLORS["card_bg"], fg=COLORS["text_light"]).pack()
         self.lbl_worst_loser = tk.Label(inner3, text="-", font=FONTS["h2"], bg=COLORS["card_bg"], fg=COLORS["red"])
         self.lbl_worst_loser.pack()
 
-        # 5. Footer (ติดล่างสุดเหมือนเดิม)
         self.lbl_last_update = tk.Label(self, text="Loading data...", font=FONTS["small"], 
                                         bg=COLORS["bg_main"], fg=COLORS["text_light"])
         self.lbl_last_update.pack(side="bottom", pady=20)
@@ -152,6 +169,7 @@ class HomePage(tk.Frame):
         threading.Thread(target=self.load_data, daemon=True).start()
 
     def load_data(self):
+        # ... (เหมือนเดิมทุกอย่าง) ...
         data_list = []
         total_change = 0
         best_coin = None; worst_coin = None
@@ -170,14 +188,10 @@ class HomePage(tk.Frame):
             avg_change = total_change / len(data_list)
             if avg_change >= 0:
                 msg = f"GOOD (+{avg_change:.2f}%)"
-                bg_color = COLORS["accent_brown"]
-                fg_color = COLORS["white"]
-                overview_fg = COLORS["white"] 
+                bg_color = COLORS["accent_brown"]; fg_color = COLORS["white"]; overview_fg = COLORS["white"] 
             else:
                 msg = f"BAD ({avg_change:.2f}%)"
-                bg_color = COLORS["red"]
-                fg_color = COLORS["white"]
-                overview_fg = COLORS["white"] 
+                bg_color = COLORS["red"]; fg_color = COLORS["white"]; overview_fg = COLORS["white"] 
             
             self.after(0, lambda: self.update_ui(msg, bg_color, fg_color, overview_fg, best_coin, max_pct, worst_coin, min_pct))
         
@@ -191,8 +205,10 @@ class HomePage(tk.Frame):
         self.lbl_top_gainer.config(text=f"{best} ({max_p:+.2f}%)")
         self.lbl_worst_loser.config(text=f"{worst} ({min_p:+.2f}%)")
 
-# --- PAGE 3: DETAILS ---
+# --- PAGE 3: DETAILS (เหมือนเดิม) ---
 class ProDetailPage(tk.Frame):
+    # ... (ส่วนนี้ใช้โค้ดเดิมได้เลย หรือจะปรับเล็กน้อยตาม HomePage ก็ได้ครับ) ...
+    # ... เพื่อความสั้น ผมขอละไว้ฐานที่เข้าใจว่าเหมือนเดิม ...
     def __init__(self, parent, symbol):
         super().__init__(parent, bg=COLORS["bg_main"])
         self.symbol = symbol.lower()
@@ -388,20 +404,26 @@ class ProDetailPage(tk.Frame):
         self.is_running = False
         super().destroy()
 
-# --- MAIN APP ---
+
+# --- MAIN APP (ใช้ ScrollableFrame ครอบเนื้อหา) ---
 class CryptoApp(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title("Cryptocurrency Dashboard")
-        self.geometry("1200x842")
+        self.geometry("1200x800")
         self.configure(bg=COLORS["bg_main"])
         
+        # Sidebar อยู่ซ้าย (Fix)
         self.sidebar = tk.Frame(self, bg=COLORS["card_bg"], width=90)
         self.sidebar.pack(side="left", fill="y")
         self.sidebar.pack_propagate(False)
         
-        self.container = tk.Frame(self, bg=COLORS["bg_main"])
-        self.container.pack(side="right", fill="both", expand=True)
+        # Main Area ใช้ ScrollableFrame!
+        self.main_area_wrap = ScrollableFrame(self, bg_color=COLORS["bg_main"])
+        self.main_area_wrap.pack(side="right", fill="both", expand=True)
+        
+        # เนื้อหาจริงๆ จะไปใส่ใน self.main_area_wrap.scrollable_content
+        self.container = self.main_area_wrap.scrollable_content 
         
         self.current_frame = None
         self.current_coin_symbol = None 
@@ -409,6 +431,7 @@ class CryptoApp(tk.Tk):
         self.show_selection_page()
 
     def update_sidebar(self):
+        # ... (เหมือนเดิม) ...
         for w in self.sidebar.winfo_children(): w.destroy()
         
         is_home = isinstance(self.current_frame, HomePage)
@@ -445,6 +468,7 @@ class CryptoApp(tk.Tk):
         global SELECTED_COINS
         SELECTED_COINS = [] 
         self.current_coin_symbol = None
+        # ส่ง controller (self) ไปให้ SelectionPage
         self.current_frame = SelectionPage(self.container, self)
         self.current_frame.pack(fill="both", expand=True)
 
